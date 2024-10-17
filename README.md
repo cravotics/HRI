@@ -73,3 +73,65 @@ This project aims to develop a simplified Graphical User Interface (GUI) using Q
 - **Gazebo**: For simulating robots and providing test data.
 - **Hardware (Optional)**: Limited hardware integration if time permits, focusing on batteries and basic sensors.
 
+
+# To-Do List: Multi-Robot Coordination GUI Project (3 Weeks)
+
+## Week 1: Setup and Core Functionality
+
+### 1. Requirements & Environment Setup
+- [ ] Define essential use cases (battery monitoring, kill switch, basic health metrics).
+- [ ] Identify core hardware and sensors (battery, CPU load, motor temperature).
+- [ ] Install and configure ROS2, Qt, and Gazebo on all development machines.
+- [ ] Set up GitHub repository and version control workflows.
+
+### 2. Basic GUI Design
+- [ ] Design the core interface (battery widget, kill switch, health dashboard).
+- [ ] Implement the basic Qt application skeleton.
+- [ ] Focus on a simple layout for quick iteration.
+
+### 3. ROS2 Node Development (Core Features)
+- [ ] Develop ROS2 nodes to subscribe to key topics (battery level, CPU load, kill switch).
+- [ ] Test communication between ROS2 and the GUI with simulated data.
+- [ ] Implement basic battery monitoring in the GUI.
+
+## Week 2: Core Feature Integration and Simulation
+
+### 1. Simulation with Gazebo
+- [ ] Set up a basic Gazebo simulation for one robot.
+- [ ] Simulate battery level and sensor data in Gazebo.
+- [ ] Test GUI integration with simulated robot data.
+
+### 2. Hardware Integration (If Time Permits)
+- [ ] Interface hardware sensors (battery and CPU load) with ROS2.
+- [ ] Send real-time sensor data to the GUI.
+- [ ] Test basic real-time hardware data in the GUI.
+
+### 3. Kill Switch Implementation
+- [ ] Implement an individual robot kill switch in the GUI.
+- [ ] Test kill switch functionality with both simulated and real robots.
+
+### 4. System Health Monitoring
+- [ ] Integrate CPU load and motor temperature monitoring (simulated if necessary).
+- [ ] Test visualization of basic health metrics in the GUI.
+
+## Week 3: Final Testing, Optimization, and Documentation
+
+### 1. Testing and Debugging
+- [ ] Perform end-to-end testing in Gazebo (multi-robot if time allows).
+- [ ] Debug any communication or performance issues between ROS2 and the GUI.
+- [ ] Ensure kill switch and battery monitoring are functioning properly.
+
+### 2. GUI Optimization
+- [ ] Optimize GUI performance for smooth real-time monitoring.
+- [ ] Clean up the user interface for usability.
+
+### 3. Documentation and Finalization
+- [ ] Write basic documentation for using the GUI and setting up the system.
+- [ ] Prepare for a final project demonstration.
+
+## Additional Tasks (If Time Permits)
+- [ ] Expand Gazebo simulation to include multiple robots.
+- [ ] Add advanced health metrics (network health, proximity sensors).
+- [ ] Implement manual task reassignment for multi-robot coordination.
+
+
