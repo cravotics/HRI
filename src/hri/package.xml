@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>hri</name>
+  <version>0.0.1</version>
+  <description>Robot GUI with ROS2 integration</description>
+  <maintainer email="swarajmr@umd.edu">swaraj</maintainer>
+  <license>Apache 2.0</license>
+
+  <!-- Build tools -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Dependencies -->
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+  <depend>image_geometry</depend>
+  <depend>opencv</depend>
+  <depend>gazebo_msgs</depend>
+
+  <!-- Optional dependencies for testing -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <!-- Export build type -->
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
