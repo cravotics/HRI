@@ -72,12 +72,18 @@ class RobotMonitorUI(QWidget):
 
         # Start the ROS timer
         self.start_ros_timer()
+        self.voices = []
         
         # Initialize voice recognition and speech synthesis
         self.recognizer = sr.Recognizer()
         self.speech_engine = pyttsx3.init()
+        self.voices = self.speech_engine.getProperty('voices')
         self.speech_engine.setProperty('rate', 150)  # Set speaking rate
-
+        self.speech_engine.setProperty('volume', 1.0)  # Volume level (0.0 to 1.0)
+        if len(self.voices) > 1:
+            self.speech_engine.setProperty('voice', self.voices[1].id)
+        else:
+            print("Voice 2 not found, using default voice.")
         # Initialize the voice recognition thread
         self.voice_thread = VoiceRecognitionThread(self.recognizer)
         self.voice_thread.command_recognized.connect(self.process_command)
