@@ -514,12 +514,18 @@ class RobotMonitorUI(QWidget):
         print(f"Processing command: {command}")
         command_handlers = {
             "move forward": self.move_forward,
+            "move straight": self.move_forward,
             "move backward": self.move_backward,
+            "go back": self.move_backward,
             "kill all": self.kill_switch,
-            "activate  kill switch": self.kill_switch,
+            "kill robots": self.kill_switch,
+            "kill robot": self.kill_switch,
+            "activate kill switch": self.kill_switch,
             "turn left":self.turn_left,
             "turn right":self.turn_right,
             "stop robot":self.stop_robot,
+            "stop robots":self.stop_robot,
+          
         }
         
         handler = command_handlers.get(command)
