@@ -20,6 +20,7 @@ import speech_recognition as sr
 from PyQt5.QtCore import Qt, QTimer, QSize, QThread, pyqtSignal
 import sys
 import os
+sys.path.append('/home/gautamsn/HRI/src/Depth-Anything-V2')
 from depth_anything_v2.dpt import DepthAnythingV2
 import cv2
 import torch
@@ -37,12 +38,11 @@ encoder = 'vits'
 model = DepthAnythingV2(**model_configs[encoder])
 
 try:
-    model.load_state_dict(torch.load('/home/swaraj/HRI/src/gui/gui/depth_anything_v2/depth_anything_v2_vits.pth', map_location='cpu'))
+    model.load_state_dict(torch.load('/home/gautamsn/HRI/src/gui/gui/depth_anything_v2/depth_anything_v2_vits.pth', map_location='cpu'))
 except FileNotFoundError:
     print("Model file not found. Please ensure it is located in 'depth_anything_v2/' or update the path.")
     exit(1)
 
-# model.load_state_dict(torch.load('/home/swaraj/HRI/src/gui/gui/depth_anything_v2/depth_anything_v2_vits.pth', map_location='cpu', weights_only=True))
 model = model.to(DEVICE).eval()
 
 
@@ -79,6 +79,8 @@ class RobotMonitorUI(QWidget):
         # List of robot names
         self.robot_names = ["waffle_1", "waffle_2", "waffle_3", "waffle_4"]
         self.robot_batteries = {}
+        self.voices = []
+        self.voices = self.speech_engine.getProperty('voices')
 
         # Initialize ROS node
         rclpy.init()
@@ -103,7 +105,11 @@ class RobotMonitorUI(QWidget):
         self.recognizer = sr.Recognizer()
         self.speech_engine = pyttsx3.init()
         self.speech_engine.setProperty('rate', 150)  # Set speaking rate
-
+        self.speech_engine.setProperty('volume', 1.0)  # Volume level (0.0 to 1.0)
+        if len(self.voices) > 1:
+            self.speech_engine.setProperty('voice', self.voices[1].id)
+        else:
+            print("Voice 2 not found, using default voice.")
         # Initialize the voice recognition thread
         self.voice_thread = VoiceRecognitionThread(self.recognizer)
         self.voice_thread.command_recognized.connect(self.process_command)
@@ -584,6 +590,11 @@ class RobotMonitorUI(QWidget):
             "turn left":self.turn_left,
             "turn right":self.turn_right,
             "stop robot":self.stop_robot,
+            "move straight": self.move_forward,
+            "go back": self.move_backward,
+            "kill robots": self.kill_switch,
+            "kill robot": self.kill_switch,
+            "stop robots":self.stop_robot,
         }
         
         handler = command_handlers.get(command)
