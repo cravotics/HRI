@@ -330,7 +330,7 @@ class RobotMonitorUI(QWidget):
         right_layout = QVBoxLayout(right_frame)
 
         # Map View (Placeholder)
-        map_label = QLabel("Map View:", self)
+        map_label = QLabel("Experimentation Display:", self)
         map_label.setFont(headline_font)
         right_layout.addWidget(map_label)
         self.map_view = QLabel(self)
