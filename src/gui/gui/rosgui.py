@@ -377,7 +377,7 @@ class RobotMonitorUI(QWidget):
         # Timer to update the battery level (simulated)
         self.battery_timer = QTimer()
         self.battery_timer.timeout.connect(self.update_battery)
-        self.battery_timer.start(1000)  # Update every second
+        self.battery_timer.start(20000)  # Update every second
 
     def initialize_ros_topics(self):
         # Close existing subscriptions and publishers if they exist
