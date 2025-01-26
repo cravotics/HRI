@@ -1,4 +1,4 @@
-# Project Plan: Multi-Robot Coordination GUI Using Qt, ROS2, and Gazebo (3 Weeks)
+Multi-Robot Coordination GUI Using Qt, ROS2, and Gazebo (3 Weeks)
 
 ## Project Overview
 This project aims to develop a Graphical User Interface (GUI) using Qt that integrates with ROS2 and Gazebo for monitoring and controlling TurtleBot 3 robots in simulation. The focus will be on visualizing key topics like odometry, LiDAR scans, and camera feed, while also providing a **teleoperation (telop)** feature to manually control the robots using buttons in the GUI. Additionally, the GUI will have a kill switch for emergency robot shutdown. Given the 3-week timeline, the project will focus on essential functionality for multi-robot coordination in simulation.
@@ -43,26 +43,6 @@ This project aims to develop a Graphical User Interface (GUI) using Qt that inte
    
 3. **Multiple Robots**: The GUI will include buttons for each robot if multiple TurtleBots are being controlled at once.
 
-## Team Roles and Responsibilities
-1. **Team Lead**:
-   - Coordinate tasks and ensure the project meets the 3-week deadline.
-   - Oversee the integration of ROS2 topics with the GUI and simulation.
-
-2. **GUI Developer**:
-   - Design and implement the Qt-based interface for odometry, LiDAR, camera, and teleoperation control.
-   - Ensure the kill switch and teleoperation (telop) feature is integrated and operational.
-
-3. **ROS2 Integration Specialist**:
-   - Develop ROS2 nodes to subscribe to topics like `/odom`, `/scan`, and `/camera/rgb/image_raw`.
-   - Implement teleoperation by publishing movement commands to the `/cmd_vel` topic based on button presses.
-
-4. **Simulation Engineer**:
-   - Set up and configure TurtleBot 3 in the Gazebo simulation.
-   - Ensure the simulation environment provides accurate data for the GUI.
-
-5. **System Tester**:
-   - Test the end-to-end functionality of the GUI with the Gazebo simulation.
-   - Debug any integration issues between ROS2, Gazebo, and the GUI.
 
 ## Development Timeline
 
