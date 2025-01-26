@@ -1,75 +1,156 @@
-# MultiViz
-## Project Overview
-This project aims to develop a Graphical User Interface (GUI) using Qt that integrates with ROS2 and Gazebo for monitoring and controlling TurtleBot 3 robots in simulation. The focus will be on visualizing key topics like odometry, LiDAR scans, and camera feed, while also providing a **teleoperation (telop)** feature to manually control the robots using buttons in the GUI. Additionally, the GUI will have a kill switch for emergency robot shutdown. Given the 3-week timeline, the project will focus on essential functionality for multi-robot coordination in simulation.
+# MULTI⦿VIZ
 
-## Key Features
-1. **Odometry Visualization**:
-   - Display real-time odometry data for each TurtleBot (position, orientation, velocity).
-   - Visualize robot movement on a 2D map.
+**A ROS2-based, user-friendly GUI for multi-robot monitoring, control, and experimentation**
 
-2. **LiDAR Scan (Laser Scan) Visualization**:
-   - Display real-time LiDAR scan data from TurtleBot 3.
-   - Visualize detected obstacles and surroundings.
+---
 
-3. **Camera Feed**:
-   - Stream the camera feed from the TurtleBot’s onboard camera.
-   - Display real-time video in the GUI.
+## Table of Contents
+- [Overview](#overview)
+- [Project Outcomes](#project-outcomes)
+- [Success Metrics](#success-metrics)
+- [Analysis of Results](#analysis-of-results)
+- [Demonstration](#demonstration)
+- [Individual Contribution](#individual-contribution)
+- [License](#license) *(TBD)*
+- [Contact](#contact)
 
-4. **Kill Switch**:
-   - Implement a kill switch to stop individual or all robots in an emergency.
-   - Display the status (active/inactive) of each robot.
+---
 
-5. **Teleoperation (Telop) Control**:
-   - Add buttons to the GUI to manually control the robots.
-     - Forward, Backward, Turn Left, Turn Right, Stop.
-   - Each button will send movement commands to the TurtleBot via ROS2 topics (e.g., `/cmd_vel` for velocity control).
-   - Display the current status of the robot (e.g., moving forward, stopped).
+## Overview
 
-6. **Multi-Robot Monitoring**:
-   - Support real-time data visualization for multiple TurtleBot 3 robots in simulation.
-   - Display essential data (odometry, LiDAR, camera) for each robot.
+**MULTI⦿VIZ** is a user-friendly GUI designed to effectively monitor, control, and experiment with multiple robots in real-time, using ROS2 (tested with ROS 2 Humble). It offers:
+- Real-time visualization of odometry, LiDAR, and camera feeds.
+- Teleoperation and waypoint navigation (x, y, yaw).
+- Integrated voice command interface with Text-To-Speech feedback.
+- A customizable "Experimentation" display (for depth maps, heat maps, segmentation, etc.).
+- An emergency kill switch for instant robot shutdowns.
+- Battery monitoring for real-world applications (when integrated with appropriate battery feedback topics).
+  
+This tool addresses the limitations of existing solutions like RViz for multi-robot handling and focuses on modularity, scalability, and open-source adaptability.
 
-## How Teleoperation (Telop) Works (Layman’s Terms)
+**Release Date:** January 1, 2025  
+**Test Environment:** ROS 2 Humble | Gazebo (multiple TurtleBot Waffle robots)
 
-1. **Manual Control**: We will add simple control buttons to the GUI, like "Forward," "Backward," "Turn Left," "Turn Right," and "Stop." 
-   - When a button is pressed, the GUI will send a signal (called a ROS2 message) to the TurtleBot, telling it to move in that direction.
-   - This works through the `/cmd_vel` topic, which handles movement commands for the robot.
+---
 
-2. **Real-Time Response**: The robot will move according to the button presses. For example:
-   - Pressing "Forward" sends a command to the robot to move forward.
-   - Pressing "Turn Left" rotates the robot in place to the left.
-   - The "Stop" button immediately stops the robot’s motion.
-   
-3. **Multiple Robots**: The GUI will include buttons for each robot if multiple TurtleBots are being controlled at once.
+## Project Outcomes
 
+1. **Multi-Robot Visualization**  
+   Real-time odometry, LiDAR, and camera visualization for multiple robots.
 
-## Development Timeline
+2. **Integrated Control**  
+   - Teleoperation (manual control via GUI buttons).
+   - Waypoint navigation (specify x, y, yaw).
 
-### Week 1: Setup and Core Functionality
-- **Requirements**: Identify key topics (odometry, LiDAR, camera, teleoperation) to be visualized.
-- **Environment Setup**: Set up ROS2, Qt, and Gazebo with TurtleBot 3 in simulation.
-- **GUI Design**: Create a basic interface layout for odometry, LiDAR, camera, and teleoperation controls.
-- **ROS2 Nodes**: Develop basic ROS2 nodes to subscribe to `/odom`, `/scan`, `/camera/rgb/image_raw` and to publish to `/cmd_vel` for teleoperation.
+3. **Voice Command + TTS**  
+   Accurate voice command recognition with auditory feedback via Text-To-Speech.
 
-### Week 2: Core Feature Integration
-- **Odometry Visualization**: Implement real-time odometry data visualization in the GUI.
-- **LiDAR Scan Visualization**: Display real-time LiDAR scan data and obstacle detection.
-- **Camera Feed**: Stream and display the TurtleBot’s camera feed in the GUI.
-- **Teleoperation (Telop)**: Implement button-based manual control (Forward, Backward, Turn Left, Turn Right, Stop) for the robots.
-- **Multi-Robot Setup**: Test the GUI with multiple TurtleBot 3 robots in Gazebo.
+4. **Custom Experimentation Display**  
+   For advanced data visualizations such as depth maps, heat maps, segmentation results, etc.
 
-### Week 3: Final Testing, Optimization, and Documentation
-- **Testing**: Conduct thorough end-to-end testing with the Gazebo simulation.
-- **Kill Switch**: Implement and test the kill switch for emergency stop functionality.
-- **GUI Optimization**: Ensure the GUI runs smoothly and handles multiple robots.
-- **Documentation**: Write clear instructions and documentation for the system.
+5. **Emergency Kill Switch**  
+   Immediate shutdown of all robots in motion, ensuring safety during operations.
 
-## Challenges and Considerations
-- **Real-Time Communication**: Ensure low-latency data visualization for odometry, LiDAR, and camera topics, and real-time teleoperation response.
-- **Multi-Robot Coordination**: Make sure the GUI can handle and display data from multiple robots in the simulation environment, with independent controls for each.
-- **Teleoperation Safety**: Ensure that teleoperation commands are safely handled and stop commands take priority in emergencies.
+6. **Smooth Multi-Robot Simulation**  
+   Validated in Gazebo environment for real-time performance and coordination.
 
-## Tools and Technologies
-- **Qt**: For building the cross-platform GUI.
-- **ROS2**: For handling communication between the simulation and the GUI.
-- **Gazebo**: For simulating TurtleBot 3 robots and generating data for visualization.
+---
+
+## Success Metrics
+
+1. **Data Visualization Latency**  
+   Less than 1000 ms delay in odometry, LiDAR, and camera feeds during multi-robot operation.
+
+2. **Voice Command Accuracy**  
+   ≥90% correct recognition of varied voice commands.
+
+3. **Experimentation Display Reliability**  
+   ≥90% success rate in displaying correct outcomes (e.g., heat maps, depth maps, etc.).
+
+4. **Emergency Shutdown**  
+   Immediate stop of all robots upon activating the kill switch.
+
+5. **Real-Time Logging Performance**  
+   No noticeable lag in logging or visual feeds.
+
+6. **TTS Feedback Clarity**  
+   Clear and understandable Text-To-Speech responses.
+
+7. **Open-Source Modularity**  
+   Verified code modularity and scalability for community collaboration.
+
+---
+
+## Analysis of Results
+
+1. **Latency and Performance**  
+   - Achieved <1000 ms latency in data visualization.  
+   - Minimal noticeable lag when scaling to multiple robots.
+
+2. **Voice Interaction**  
+   - Surpassed 90% voice recognition accuracy using Python speech recognition libraries.  
+   - TTS (via Pyttsx3) provided clear auditory feedback.
+
+3. **Experimentation Visuals**  
+   - Custom displays for depth/heat maps matched expected results in most test trials.
+
+4. **Emergency Kill Switch**  
+   - Instantaneous robot stoppage during multi-robot motion, confirming system safety.
+
+5. **Scalability and Robustness**  
+   - Post-test evaluations indicate readiness for open-source release and community collaboration.
+
+6. **Conclusion**  
+   - MULTI⦿VIZ demonstrates a robust, scalable GUI for multi-robot systems, meeting real-time operation demands.
+
+---
+
+## Demonstration
+
+A brief demonstration of **MULTI⦿VIZ** can be viewed here:  
+[**MULTI⦿VIZ Demo.mp4**](#)  
+*(Replace `(#)` with the actual link once available.)*
+
+---
+
+### Key Responsibilities
+
+1. **GUI Development (From Scratch)**  
+   - Implemented initial and alpha versions in PyQt5.  
+   - Ensured integration points for multi-robot system features.
+
+2. **Teleoperation Module**  
+   - Designed the manual control panel (buttons and sliders).  
+   - Enabled control for multiple robots concurrently.
+
+3. **Logging Mechanism**  
+   - Added a real-time logging section to display executed actions, aiding in debugging.
+
+4. **Modular & Scalable Code**  
+   - Wrote the GUI with future expansions in mind.  
+   - Ensured easy adaptation for additional robot types and features.
+
+5. **Simulation Integration**  
+   - Co-worked on the multi-robot Gazebo setup.  
+   - Verified seamless communication between the GUI and simulated robots.
+
+6. **System Architecture & Documentation**  
+   - Documented system design after testing.  
+   - Provided guidelines for future contributors and expansions.
+
+---
+
+## License
+*(License information to be updated; consider using an open-source license like MIT, Apache 2.0, or GPL.)*
+
+---
+
+## Contact
+
+For more details or collaboration:
+- [Email](mailto:your_email@example.com)
+- [GitHub Issues](#) *(Replace with actual GitHub repository link)*
+
+---
+
+**© 2025 MULTI⦿VIZ Contributors.**
