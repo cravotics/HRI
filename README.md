@@ -1,5 +1,4 @@
-Multi-Robot Coordination GUI Using Qt, ROS2, and Gazebo (3 Weeks)
-
+# MultiViz
 ## Project Overview
 This project aims to develop a Graphical User Interface (GUI) using Qt that integrates with ROS2 and Gazebo for monitoring and controlling TurtleBot 3 robots in simulation. The focus will be on visualizing key topics like odometry, LiDAR scans, and camera feed, while also providing a **teleoperation (telop)** feature to manually control the robots using buttons in the GUI. Additionally, the GUI will have a kill switch for emergency robot shutdown. Given the 3-week timeline, the project will focus on essential functionality for multi-robot coordination in simulation.
 
