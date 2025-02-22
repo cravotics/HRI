@@ -1,0 +1,11 @@
+robots:
+  - namespace: waffle_1
+  - namespace: waffle_2
+  - namespace: waffle_3
+  - namespace: waffle_4
+  - namespace: waffle_5
+  - namespace: waffle_6
+  - namespace: waffle_7
+  - namespace: waffle_8
+  - namespace: waffle_9
+  - namespace: waffle_10
