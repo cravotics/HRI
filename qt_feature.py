@@ -4,6 +4,12 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QComboBox, QProgressB
                              QInputDialog, QTextEdit, QSplitter)
 from PyQt5.QtCore import Qt, QSize, QTimer, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon, QPixmap
+from PyQt5.QtWidgets import QMessageBox
+
+from PyQt5.QtWidgets import QInputDialog
+from ros_integration import QuaternionConverter  # Import Quaternion conversion utility
+from nav2_msgs.action import NavigateToPose
+from geometry_msgs.msg import PoseStamped
 import pyttsx3
 import speech_recognition as sr
 
@@ -362,31 +368,33 @@ class RobotMonitorUI(QWidget):
         self.speech_engine.runAndWait()
     
     def set_waypoint(self):
+        """
+        Open a dialog box to collect waypoint coordinates and send them as a goal to the selected robot.
+        """
         waypoint, ok = QInputDialog.getText(self, 'Set Waypoint', 'Enter waypoint coordinates (x, y, yaw):')
+
         if ok:
-            x, y, yaw = waypoint.split(',')
-            x, y, yaw = float(x), float(y), float(yaw)
-            print(x, y, yaw)
-            quaternion = euler2quat(0.0, 0.0, yaw)
-            from geometry_msgs.msg import PoseStamped
-            pose = PoseStamped()
-            pose.header.frame_id = 'map'
-            pose.header.stamp = self.ros_interface.get_clock().now().to_msg()
-            pose.pose.position.x = x
-            pose.pose.position.y = y
-            pose.pose.position.z = 0.0
-            pose.pose.orientation.w = quaternion[0]
-            pose.pose.orientation.x = quaternion[1]
-            pose.pose.orientation.y = quaternion[2]
-            pose.pose.orientation.z = quaternion[3]
-            goal_msg = NavigateToPose.Goal()
-            goal_msg.pose = pose
-            # Use the ROS integration helper method to send the navigation goal.
             try:
+                # Parsing the  input
+                x, y, yaw = map(float, waypoint.split(','))
+
+                # this will call RosIntegration function to send goal
                 idx = self.ros_interface.namespace_list.index(self.namespace)
-                self.ros_interface.send_navigation_goal(idx, goal_msg)
+                goal_msg = self.ros_interface.create_nav_goal(x, y, yaw)
+
+                # Call the send_navigation_goal() function
+                send_goal_future = self.ros_interface.send_navigation_goal(idx, goal_msg)
+
+                # Notify the user
+                if send_goal_future is not None:
+                    self.logs_text_edit.append(f"Waypoint set for {self.namespace} at ({x}, {y}, {yaw})")
+                else:
+                    QMessageBox.critical(self, "Error", "Failed to send navigation goal.")
+
             except ValueError:
-                self.logs_text_edit.append(f"Namespace {self.namespace} not found.")
+                QMessageBox.warning(self, "Input Error", "Please enter valid numeric values for x, y, and yaw.")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Unexpected error: {e}")
     
     def closeEvent(self, event):
         self.ros_interface.destroy_node()
