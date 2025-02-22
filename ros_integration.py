@@ -6,13 +6,13 @@ from rclpy.node import Node
 from rclpy.action import ActionClient
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped, Twist, Quaternion
-from sensor_msgs.msg import LaserScan, Image
+from sensor_msgs.msg import Image
 from nav2_msgs.action import NavigateToPose
 from cv_bridge import CvBridge
 from PyQt5.QtGui import QImage, QPixmap
 from std_msgs.msg import Float32
 from sensor_msgs.msg import BatteryState
-
+from PyQt5.QtCore import pyqtSignal, QObject
 import yaml
 
 class QuaternionConverter:
@@ -60,24 +60,25 @@ class QuaternionConverter:
         
         return roll, pitch, yaw
 
-class RosIntegration(Node):
+class RosIntegration(Node,QObject):
+    odom_updated = pyqtSignal(str)  
+    image_updated = pyqtSignal(QPixmap)
     def __init__(self):
-        super().__init__('robot_monitor_ui')
+        Node.__init__(self,'robot_monitor_ui')
+        QObject.__init__(self)
         self.bridge = CvBridge()
         self.nav_clients = []
         self.config = self.load_yaml_config()
         self.topics = self.config['topics']
         self.robot_info = self.config['robot_info']
         self.namespace_list = self.robot_info["robot_namespaces"]
-
-        # 1) A place to store battery levels
+        self.selected_robot = self.namespace_list[0]
         self.battery_levels = {ns: 100.0 for ns in self.namespace_list}
-
+        self.odom_text = None
         self._init_ros_components()
 
     def _init_ros_components(self):
         self.odom_subs = []
-        self.scan_subs = []
         self.image_subs = []
         self.cmd_vel_pubs = []
         self.battery_subs = []
@@ -86,19 +87,13 @@ class RosIntegration(Node):
             # Odom
             self.odom_subs.append(
                 self.create_subscription(
-                    Odometry, f"/{ns}/{self.topics['odom']}", self.odom_callback, 10)
-            )
-
-            # Laser
-            self.scan_subs.append(
-                self.create_subscription(
-                    LaserScan, f"/{ns}/{self.topics['scan']}", self.scan_callback, 10)
+                    Odometry, f"/{ns}/{self.topics['odom']}", lambda msg, ns=ns: self.odom_callback(msg, ns), 10)
             )
 
             # Camera
             self.image_subs.append(
                 self.create_subscription(
-                    Image, f"/{ns}/{self.topics['camera']}", self.image_callback, 10)
+                    Image, f"/{ns}/{self.topics['camera']}", lambda msg, ns=ns: self.image_callback(msg, ns), 10)
             )
 
             # cmd_vel
@@ -121,9 +116,13 @@ class RosIntegration(Node):
                 10
             )
             self.battery_subs.append(subscription)
-
+        
+        
+    def set_selected_robot(self, robot_name):
+        """ Set the currently selected robot """
+        self.selected_robot = robot_name
+        
     def battery_callback(self, msg: BatteryState, robot_namespace: str):
-        # Convert msg.percentage [0..1] -> 0..100
         percent = max(0.0, min(msg.percentage * 100.0, 100.0))
         self.battery_levels[robot_namespace] = percent
         self.get_logger().info(
@@ -132,9 +131,6 @@ class RosIntegration(Node):
 
     def get_current_battery_levels(self):
         return self.battery_levels
-
-
-    
 
     def create_nav_goal(self, x, y, theta, frame_id='map'):
         """
@@ -182,27 +178,23 @@ class RosIntegration(Node):
         return send_goal_future
 
     
-    def odom_callback(self, msg):
+    def odom_callback(self, msg, robot_ns):
+        if self.selected_robot != robot_ns:
+            return 
         position = msg.pose.pose.position
         orientation = msg.pose.pose.orientation
-        text = (f"Position: x={position.x:.2f}, y={position.y:.2f}, z={position.z:.2f}\n"
+        odom_text = (f"Position: x={position.x:.2f}, y={position.y:.2f}, z={position.z:.2f}\n"
                 f"Orientation: x={orientation.x:.2f}, y={orientation.y:.2f}, "
                 f"z={orientation.z:.2f}, w={orientation.w:.2f}")
-        self.get_logger().info(text)
+        self.odom_updated.emit(odom_text)
 
-    def scan_callback(self, msg):
-        ranges = msg.ranges
-        if len(ranges) >= 3:
-            text = f"Distances: {ranges[0]:.2f}, {ranges[1]:.2f}, {ranges[2]:.2f}..."
-        else:
-            text = "Laser data unavailable"
-        self.get_logger().info(text)
+    def image_callback(self, msg, robot_ns):
+            if self.selected_robot != robot_ns:
+                return 
 
-    def image_callback(self, msg):
-        pixmap = self.ros_image_to_qpixmap(msg)
-        if pixmap:
-            pass
-
+            pixmap = self.ros_image_to_qpixmap(msg)
+            if pixmap:
+                self.image_updated.emit(pixmap) 
 
     def ros_image_to_qpixmap(self, msg):
         try:
@@ -225,7 +217,7 @@ class RosIntegration(Node):
         twist.angular.z = angular
         self.cmd_vel_pubs[index].publish(twist)
     
-    def load_yaml_config(self,file_path="/home/jagadeesh/multiviz/HRI/HRI_final_project_GUI/config.yaml"):
+    def load_yaml_config(self,file_path="/root/ros2_ws/src/gui/gui/config.yaml"):
         with open(file_path, 'r') as file:
             config = yaml.safe_load(file)
         return config
