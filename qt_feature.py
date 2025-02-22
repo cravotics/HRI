@@ -44,7 +44,8 @@ class RobotMonitorUI(QWidget):
         self.ros_interface = ros_interface  # Injected ROS node instance
         self.robot_names = self.ros_interface.namespace_list
         self.namespace = self.robot_names[0]
-        self.robot_batteries = {}
+        # Maintain battery levels for each robot
+        self.battery_levels = {name: 100 for name in self.robot_names}
         
         self.initUI()
         
@@ -112,23 +113,18 @@ class RobotMonitorUI(QWidget):
         self.voice_control_button.clicked.connect(self.toggle_voice_control)
         main_layout.addWidget(self.voice_control_button)
         
-        # Robot battery status.
-        robot_battery_layout = QHBoxLayout()
-        for robot_name in self.robot_names:
-            container = QVBoxLayout()
-            label = QLabel(robot_name)
-            label.setAlignment(Qt.AlignCenter)
-            label.setFont(QFont("Arial", 12, QFont.Bold))
-            battery_bar = QProgressBar()
-            battery_bar.setRange(0, 100)
-            battery_bar.setValue(100)
-            battery_bar.setTextVisible(True)
-            battery_bar.setFixedWidth(100)
-            self.robot_batteries[robot_name] = battery_bar
-            container.addWidget(label)
-            container.addWidget(battery_bar)
-            robot_battery_layout.addLayout(container)
-        header_layout.addLayout(robot_battery_layout)
+        # Battery status for the selected robot.
+        battery_layout = QHBoxLayout()
+        battery_label = QLabel("Battery:")
+        battery_label.setFont(QFont("Arial", 12, QFont.Bold))
+        battery_layout.addWidget(battery_label)
+        self.battery_bar = QProgressBar()
+        self.battery_bar.setRange(0, 100)
+        self.battery_bar.setValue(self.battery_levels[self.namespace])
+        self.battery_bar.setTextVisible(True)
+        self.battery_bar.setFixedWidth(150)
+        battery_layout.addWidget(self.battery_bar)
+        header_layout.addLayout(battery_layout)
         
         # Kill switch button.
         self.kill_switch_button = QPushButton('Kill Switch')
@@ -221,7 +217,7 @@ class RobotMonitorUI(QWidget):
         self.btn_set_waypoint.clicked.connect(self.set_waypoint)
         left_layout.addWidget(self.btn_set_waypoint)
         left_layout.addStretch()
-        # Right pane: Map, Camera, and Laser data.
+        # Right pane: Map and Camera data.
         right_frame = QFrame(self)
         right_layout = QVBoxLayout(right_frame)
         map_label = QLabel("Experimentation Display:")
@@ -238,12 +234,7 @@ class RobotMonitorUI(QWidget):
         self.image_view.setPixmap(QPixmap(640, 240))
         self.image_view.setScaledContents(True)
         right_layout.addWidget(self.image_view)
-        laser_label = QLabel("Laser Scan Data")
-        laser_label.setFont(headline_font)
-        right_layout.addWidget(laser_label)
-        self.laser_value = QLineEdit(self)
-        self.laser_value.setReadOnly(True)
-        right_layout.addWidget(self.laser_value)
+        # (Laser scan display removed as requested)
         right_layout.addStretch()
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(left_frame)
@@ -264,6 +255,12 @@ class RobotMonitorUI(QWidget):
     def on_robot_selected(self, robot_name):
         self.namespace = robot_name
         self.logs_text_edit.append(f"Switched to {robot_name}")
+        # Update the battery display to show the selected robot's battery level.
+        self.battery_bar.setValue(self.battery_levels[robot_name])
+        if self.battery_levels[robot_name] < 30:
+            self.battery_bar.setStyleSheet("QProgressBar::chunk { background-color: red; }")
+        else:
+            self.battery_bar.setStyleSheet("QProgressBar::chunk { background-color: green; }")
     
     def publish_cmd_vel(self, linear, angular):
         try:
@@ -329,15 +326,15 @@ class RobotMonitorUI(QWidget):
         self.cmd_vel_value.setText(text)
     
     def update_battery(self):
-        for robot_name in self.robot_names:
-            battery_bar = self.robot_batteries[robot_name]
-            current_value = battery_bar.value()
-            new_value = max(0, current_value - 1)
-            battery_bar.setValue(new_value)
-            if new_value < 30:
-                battery_bar.setStyleSheet("QProgressBar::chunk { background-color: red; }")
-            else:
-                battery_bar.setStyleSheet("QProgressBar::chunk { background-color: green; }")
+        # Update battery for the selected robot only.
+        current_value = self.battery_levels[self.namespace]
+        new_value = max(0, current_value - 1)
+        self.battery_levels[self.namespace] = new_value
+        self.battery_bar.setValue(new_value)
+        if new_value < 30:
+            self.battery_bar.setStyleSheet("QProgressBar::chunk { background-color: red; }")
+        else:
+            self.battery_bar.setStyleSheet("QProgressBar::chunk { background-color: green; }")
     
     def move_forward(self):
         self.speech_engine.say("Moving forward")
