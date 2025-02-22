@@ -10,6 +10,10 @@ from sensor_msgs.msg import LaserScan, Image
 from nav2_msgs.action import NavigateToPose
 from cv_bridge import CvBridge
 from PyQt5.QtGui import QImage, QPixmap
+from std_msgs.msg import Float32
+from sensor_msgs.msg import BatteryState
+
+import yaml
 
 class QuaternionConverter:
     @staticmethod
@@ -57,11 +61,18 @@ class QuaternionConverter:
         return roll, pitch, yaw
 
 class RosIntegration(Node):
-    def __init__(self, namespace_list=["robot_1", "robot_2"]):
+    def __init__(self):
         super().__init__('robot_monitor_ui')
-        self.namespace_list = namespace_list
         self.bridge = CvBridge()
         self.nav_clients = []
+        self.config = self.load_yaml_config()
+        self.topics = self.config['topics']
+        self.robot_info = self.config['robot_info']
+        self.namespace_list = self.robot_info["robot_namespaces"]
+
+        # 1) A place to store battery levels
+        self.battery_levels = {ns: 100.0 for ns in self.namespace_list}
+
         self._init_ros_components()
 
     def _init_ros_components(self):
@@ -69,25 +80,61 @@ class RosIntegration(Node):
         self.scan_subs = []
         self.image_subs = []
         self.cmd_vel_pubs = []
-        
+        self.battery_subs = []
+
         for ns in self.namespace_list:
-            # Subscribers
-            self.odom_subs.append(self.create_subscription(
-                Odometry, f'/{ns}/odom', self.odom_callback, 10))
-            
-            self.scan_subs.append(self.create_subscription(
-                LaserScan, f'/{ns}/scan', self.scan_callback, 10))
-            
-            self.image_subs.append(self.create_subscription(
-                Image, f'/{ns}/camera/image_raw', self.image_callback, 10))
-            
-            # Publishers
-            self.cmd_vel_pubs.append(self.create_publisher(
-                Twist, f'/{ns}/cmd_vel', 10))
-            
-            # Action Clients
-            self.nav_clients.append(ActionClient(
-                self, NavigateToPose, f'/{ns}/navigate_to_pose'))
+            # Odom
+            self.odom_subs.append(
+                self.create_subscription(
+                    Odometry, f"/{ns}/{self.topics['odom']}", self.odom_callback, 10)
+            )
+
+            # Laser
+            self.scan_subs.append(
+                self.create_subscription(
+                    LaserScan, f"/{ns}/{self.topics['scan']}", self.scan_callback, 10)
+            )
+
+            # Camera
+            self.image_subs.append(
+                self.create_subscription(
+                    Image, f"/{ns}/{self.topics['camera']}", self.image_callback, 10)
+            )
+
+            # cmd_vel
+            self.cmd_vel_pubs.append(
+                self.create_publisher(
+                    Twist, f"/{ns}/{self.topics['cmd_vel']}", 10)
+            )
+
+            # Navigation action
+            self.nav_clients.append(
+                ActionClient(self, NavigateToPose, f"/{ns}/{self.topics['navigate_to_pose']}")
+            )
+
+            # Battery
+            battery_topic = f"/{ns}/{self.topics['battery']}"
+            subscription = self.create_subscription(
+                BatteryState,
+                battery_topic,
+                lambda msg, robot_ns=ns: self.battery_callback(msg, robot_ns),
+                10
+            )
+            self.battery_subs.append(subscription)
+
+    def battery_callback(self, msg: BatteryState, robot_namespace: str):
+        # Convert msg.percentage [0..1] -> 0..100
+        percent = max(0.0, min(msg.percentage * 100.0, 100.0))
+        self.battery_levels[robot_namespace] = percent
+        self.get_logger().info(
+            f"[{robot_namespace}] Battery: {percent:.1f}%"
+        )
+
+    def get_current_battery_levels(self):
+        return self.battery_levels
+
+
+    
 
     def create_nav_goal(self, x, y, theta, frame_id='map'):
         """
@@ -154,8 +201,8 @@ class RosIntegration(Node):
     def image_callback(self, msg):
         pixmap = self.ros_image_to_qpixmap(msg)
         if pixmap:
-            # Optionally, forward the pixmap to the UI via a signal.
             pass
+
 
     def ros_image_to_qpixmap(self, msg):
         try:
@@ -169,7 +216,7 @@ class RosIntegration(Node):
             return None
 
     def publish_cmd_vel_to_robot(self, index, linear, angular):
-        """Publish a Twist message to the robot at the given index."""
+
         if index < 0 or index >= len(self.cmd_vel_pubs):
             self.get_logger().error("Invalid robot index for cmd_vel publisher")
             return
@@ -177,3 +224,8 @@ class RosIntegration(Node):
         twist.linear.x = linear
         twist.angular.z = angular
         self.cmd_vel_pubs[index].publish(twist)
+    
+    def load_yaml_config(self,file_path="/home/jagadeesh/multiviz/HRI/HRI_final_project_GUI/config.yaml"):
+        with open(file_path, 'r') as file:
+            config = yaml.safe_load(file)
+        return config
