@@ -1,4 +1,3 @@
-# qt_features.py
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QComboBox, QProgressBar,
                              QHBoxLayout, QFrame, QLineEdit, QPushButton, QGridLayout,
                              QInputDialog, QTextEdit, QSplitter)
@@ -38,14 +37,17 @@ class VoiceRecognitionThread(QThread):
         self.running = False
         self.wait()
 
+
 class RobotMonitorUI(QWidget):
     def __init__(self, ros_interface):
         super().__init__()
         self.ros_interface = ros_interface  # Injected ROS node instance
         self.robot_names = self.ros_interface.namespace_list
         self.namespace = self.robot_names[0]
-        # Maintain battery levels for each robot
-        self.battery_levels = {name: 100 for name in self.robot_names}
+        self.robot_batteries = {}
+
+        # Track whether audio is muted
+        self.is_muted = False
         
         self.initUI()
         
@@ -63,13 +65,17 @@ class RobotMonitorUI(QWidget):
         self.voice_thread.command_recognized.connect(self.process_command)
 
     def initUI(self):
-        # Load icons.
+        # Load icons for teleop
         self.icon_up = QIcon('up-arrow.png')
         self.icon_down = QIcon('down-arrow.png')
         self.icon_left = QIcon('left-arrow.png')
         self.icon_right = QIcon('right-arrow.png')
         self.icon_stop = QIcon('stop.png')
         
+        # Icons for mute toggling
+        self.icon_mute = QIcon("mute.png")     # Icon shown when sound is ON
+        self.icon_unmute = QIcon("unmute.png") # Icon shown when sound is OFF
+
         main_layout = QVBoxLayout(self)
         self.setStyleSheet("""
             QWidget {
@@ -103,29 +109,59 @@ class RobotMonitorUI(QWidget):
             }
             QProgressBar::chunk { background-color: #8b4513; }
         """)
+
         # Header section.
         header_layout = QVBoxLayout()
         title_label = QLabel("MULTIVIZ 🤖 ")
         title_label.setFont(QFont("Helvetica", 36, QFont.Bold))
         title_label.setAlignment(Qt.AlignCenter)
         header_layout.addWidget(title_label)
+        
+        # (1) A small horizontal layout for Voice Control + Mute + Unmute
+        voice_buttons_layout = QHBoxLayout()
+
+        # Voice Control button
         self.voice_control_button = QPushButton("Start Voice Control")
+        self.voice_control_button.setMinimumWidth(400)
         self.voice_control_button.clicked.connect(self.toggle_voice_control)
-        main_layout.addWidget(self.voice_control_button)
+        voice_buttons_layout.addWidget(self.voice_control_button)
+
+        # Mute button
+        self.mute_button = QPushButton()
+
+        self.icon_mute = QIcon("HRI/mute.png")  # your mute icon
+        self.mute_button.setIcon(self.icon_mute)
+        self.mute_button.setIconSize(QSize(24, 24))
+        self.mute_button.setFixedSize(40, 40)
+        self.mute_button.setToolTip("Mute the GUI's speech")
+        self.mute_button.clicked.connect(self.muteSound)
+        voice_buttons_layout.addWidget(self.mute_button)
+
+        # Unmute button
+        self.unmute_button = QPushButton()
+        self.icon_unmute = QIcon("HRI/unmute.png")  # your unmute icon
+        self.unmute_button.setIcon(self.icon_unmute)
+        self.unmute_button.setIconSize(QSize(24, 24))
+        self.unmute_button.setFixedSize(40, 40)
+        self.unmute_button.setToolTip("Unmute the GUI's speech")
+        self.unmute_button.clicked.connect(self.unmuteSound)
+        voice_buttons_layout.addWidget(self.unmute_button)
+
+        # Finally, add the layout to main_layout
+        main_layout.addLayout(voice_buttons_layout)
+
+
         
-        # Battery status for the selected robot.
-        battery_layout = QHBoxLayout()
-        battery_label = QLabel("Battery:")
-        battery_label.setFont(QFont("Arial", 12, QFont.Bold))
-        battery_layout.addWidget(battery_label)
-        self.battery_bar = QProgressBar()
-        self.battery_bar.setRange(0, 100)
-        self.battery_bar.setValue(self.battery_levels[self.namespace])
-        self.battery_bar.setTextVisible(True)
-        self.battery_bar.setFixedWidth(150)
-        battery_layout.addWidget(self.battery_bar)
-        header_layout.addLayout(battery_layout)
-        
+        # Robot battery status (top 5 display)
+        top_5_label = QLabel("Top 5 Lowest Batteries:")
+        top_5_label.setFont(QFont("Arial", 12, QFont.Bold))
+        top_5_label.setAlignment(Qt.AlignCenter)
+        header_layout.addWidget(top_5_label)
+
+        # This horizontal layout will hold up to 5 vertical containers
+        self.sorted_battery_layout = QHBoxLayout()
+        header_layout.addLayout(self.sorted_battery_layout)
+
         # Kill switch button.
         self.kill_switch_button = QPushButton('Kill Switch')
         self.kill_switch_button.setFont(QFont("Arial", 20, QFont.Bold))
@@ -148,6 +184,7 @@ class RobotMonitorUI(QWidget):
         robot_label = QLabel("Select Robot 🤖")
         robot_label.setFont(QFont("Arial", 12, QFont.Bold))
         robot_selection_layout.addWidget(robot_label)
+
         self.robot_dropdown = QComboBox(self)
         self.robot_dropdown.addItems(self.robot_names)
         self.robot_dropdown.currentTextChanged.connect(self.on_robot_selected)
@@ -159,6 +196,7 @@ class RobotMonitorUI(QWidget):
         left_frame = QFrame(self)
         left_layout = QVBoxLayout(left_frame)
         headline_font = QFont("Arial", 12, QFont.Bold)
+
         # Command velocity display.
         cmd_vel_label = QLabel("Command Velocity")
         cmd_vel_label.setFont(headline_font)
@@ -166,6 +204,7 @@ class RobotMonitorUI(QWidget):
         self.cmd_vel_value = QLineEdit(self)
         self.cmd_vel_value.setReadOnly(True)
         left_layout.addWidget(self.cmd_vel_value)
+
         # Odometry display.
         odom_label = QLabel("Odometry 🧭")
         odom_label.setFont(headline_font)
@@ -173,16 +212,19 @@ class RobotMonitorUI(QWidget):
         self.odom_value = QLineEdit(self)
         self.odom_value.setReadOnly(True)
         left_layout.addWidget(self.odom_value)
+
         # Teleoperation controls.
         teleop_label = QLabel("Teleop Controls 🕹️")
         teleop_label.setFont(headline_font)
         left_layout.addWidget(teleop_label)
         teleop_grid = QGridLayout()
+
         self.btn_up = QPushButton('⬆️')
         self.btn_down = QPushButton('⬇️')
         self.btn_left = QPushButton('⬅️')
         self.btn_right = QPushButton('➡️')
         self.btn_stop = QPushButton('🛑')
+
         self.btn_up.setIcon(self.icon_up)
         self.btn_down.setIcon(self.icon_down)
         self.btn_left.setIcon(self.icon_left)
@@ -191,17 +233,20 @@ class RobotMonitorUI(QWidget):
         icon_size = 32
         for btn in [self.btn_up, self.btn_down, self.btn_left, self.btn_right, self.btn_stop]:
             btn.setIconSize(QSize(icon_size, icon_size))
+
         self.btn_up.clicked.connect(self.move_forward)
         self.btn_down.clicked.connect(self.move_backward)
         self.btn_left.clicked.connect(self.turn_left)
         self.btn_right.clicked.connect(self.turn_right)
         self.btn_stop.clicked.connect(self.stop_robot)
+
         teleop_grid.addWidget(self.btn_up, 0, 1)
         teleop_grid.addWidget(self.btn_left, 1, 0)
         teleop_grid.addWidget(self.btn_stop, 1, 1)
         teleop_grid.addWidget(self.btn_right, 1, 2)
         teleop_grid.addWidget(self.btn_down, 2, 1)
         left_layout.addLayout(teleop_grid)
+
         # Logs section.
         logs_label = QLabel("Logs 📚")
         logs_label.setFont(headline_font)
@@ -209,6 +254,7 @@ class RobotMonitorUI(QWidget):
         self.logs_text_edit = QTextEdit(self)
         self.logs_text_edit.setReadOnly(True)
         left_layout.addWidget(self.logs_text_edit)
+
         # Waypoint input.
         waypoint_label = QLabel("Set Waypoints 📍")
         waypoint_label.setFont(headline_font)
@@ -217,16 +263,19 @@ class RobotMonitorUI(QWidget):
         self.btn_set_waypoint.clicked.connect(self.set_waypoint)
         left_layout.addWidget(self.btn_set_waypoint)
         left_layout.addStretch()
-        # Right pane: Map and Camera data.
+
+        # Right pane: Map, Camera
         right_frame = QFrame(self)
         right_layout = QVBoxLayout(right_frame)
         map_label = QLabel("Experimentation Display:")
         map_label.setFont(headline_font)
         right_layout.addWidget(map_label)
+
         self.map_view = QLabel(self)
         self.map_view.setPixmap(QPixmap(640, 240))
         self.map_view.setScaledContents(True)
         right_layout.addWidget(self.map_view)
+
         image_label = QLabel("Camera View 📹")
         image_label.setFont(headline_font)
         right_layout.addWidget(image_label)
@@ -234,7 +283,7 @@ class RobotMonitorUI(QWidget):
         self.image_view.setPixmap(QPixmap(640, 240))
         self.image_view.setScaledContents(True)
         right_layout.addWidget(self.image_view)
-        # (Laser scan display removed as requested)
+
         right_layout.addStretch()
         splitter = QSplitter(Qt.Horizontal)
         splitter.addWidget(left_frame)
@@ -243,24 +292,47 @@ class RobotMonitorUI(QWidget):
         splitter.setStretchFactor(1, 2)
         data_layout.addWidget(splitter)
         main_layout.addLayout(data_layout)
+
         self.setLayout(main_layout)
         self.setWindowTitle('Multiviz - Robot Monitor and Control Interface')
         self.setGeometry(100, 100, 1280, 720)
+
         # Timer to update battery levels (simulated).
         self.battery_timer = QTimer()
         self.battery_timer.timeout.connect(self.update_battery)
         self.battery_timer.start(20000)
-    
+
+    def muteSound(self):
+        self.speech_engine.setProperty('volume', 0.0)
+        self.logs_text_edit.append("Sound muted.")
+
+    def unmuteSound(self):
+        self.speech_engine.setProperty('volume', 1.0)
+        self.logs_text_edit.append("Sound unmuted.")
+
+
+    def toggle_mute_sound(self):
+        """
+        Toggle speech engine volume between 1.0 and 0.0, 
+        and swap the icon from mute->unmute or unmute->mute.
+        """
+        if not self.is_muted:
+            # Currently unmuted => mute
+            self.speech_engine.setProperty('volume', 0.0)
+            self.is_muted = True
+            self.mute_button.setIcon(self.icon_unmute)
+            self.logs_text_edit.append("Sound muted.")
+        else:
+            # Currently muted => unmute
+            self.speech_engine.setProperty('volume', 1.0)
+            self.is_muted = False
+            self.mute_button.setIcon(self.icon_mute)
+            self.logs_text_edit.append("Sound unmuted.")
+
     # --- UI Callback Methods ---
     def on_robot_selected(self, robot_name):
         self.namespace = robot_name
         self.logs_text_edit.append(f"Switched to {robot_name}")
-        # Update the battery display to show the selected robot's battery level.
-        self.battery_bar.setValue(self.battery_levels[robot_name])
-        if self.battery_levels[robot_name] < 30:
-            self.battery_bar.setStyleSheet("QProgressBar::chunk { background-color: red; }")
-        else:
-            self.battery_bar.setStyleSheet("QProgressBar::chunk { background-color: green; }")
     
     def publish_cmd_vel(self, linear, angular):
         try:
@@ -326,16 +398,57 @@ class RobotMonitorUI(QWidget):
         self.cmd_vel_value.setText(text)
     
     def update_battery(self):
-        # Update battery for the selected robot only.
-        current_value = self.battery_levels[self.namespace]
-        new_value = max(0, current_value - 1)
-        self.battery_levels[self.namespace] = new_value
-        self.battery_bar.setValue(new_value)
-        if new_value < 30:
-            self.battery_bar.setStyleSheet("QProgressBar::chunk { background-color: red; }")
-        else:
-            self.battery_bar.setStyleSheet("QProgressBar::chunk { background-color: green; }")
-    
+        # 1) Get the current battery data
+        latest_battery = self.ros_interface.get_current_battery_levels()
+
+        # 2) Make sure *all* robot names exist in the dictionary, even if not updated
+        for name in self.robot_names:
+            if name not in latest_battery:
+                latest_battery[name] = 0.0   # Default to 0% if not updated yet
+
+        # 3) Now store the updated dictionary
+        self.battery_levels = latest_battery
+
+        # 4) Rebuild the top 5 display
+        self.display_critical_batteries()
+
+    def display_critical_batteries(self):
+        # 1) Clear old items
+        while self.sorted_battery_layout.count():
+            item = self.sorted_battery_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        # 2) Sort ascending by battery value
+        sorted_levels = sorted(self.battery_levels.items(), key=lambda x: x[1])
+        top_5_low = sorted_levels[:5]
+
+        # 3) For each robot in the top 5, create a vertical container
+        for robot_name, battery_value in top_5_low:
+            container = QVBoxLayout()
+
+            # Robot name label
+            label = QLabel(robot_name)
+            label.setAlignment(Qt.AlignCenter)
+            label.setFont(QFont("Arial", 12, QFont.Bold))
+
+            # Progress bar
+            battery_bar = QProgressBar()
+            battery_bar.setRange(0, 100)
+            battery_bar.setValue(int(battery_value))
+            battery_bar.setTextVisible(True)
+            battery_bar.setFixedWidth(100)
+
+            # Optional color if below 30%
+            if battery_value < 30:
+                battery_bar.setStyleSheet("QProgressBar::chunk { background-color: red; }")
+            else:
+                battery_bar.setStyleSheet("QProgressBar::chunk { background-color: green; }")
+
+            container.addWidget(label)
+            container.addWidget(battery_bar)
+            self.sorted_battery_layout.addLayout(container)
+
     def move_forward(self):
         self.speech_engine.say("Moving forward")
         self.speech_engine.runAndWait()
@@ -369,13 +482,12 @@ class RobotMonitorUI(QWidget):
         Open a dialog box to collect waypoint coordinates and send them as a goal to the selected robot.
         """
         waypoint, ok = QInputDialog.getText(self, 'Set Waypoint', 'Enter waypoint coordinates (x, y, yaw):')
-
         if ok:
             try:
-                # Parsing the  input
+                # Parse the input
                 x, y, yaw = map(float, waypoint.split(','))
 
-                # this will call RosIntegration function to send goal
+                # call RosIntegration function to send goal
                 idx = self.ros_interface.namespace_list.index(self.namespace)
                 goal_msg = self.ros_interface.create_nav_goal(x, y, yaw)
 
